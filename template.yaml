@@ -1,0 +1,174 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: The Adventure of NomNom
+
+Parameters:
+#  KatiParameter:
+#    Type: String
+#    Default: !GetAtt AWS::SSM::Parameter::checkpoint4
+  LatestAmiId:
+    Type: AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>
+    Default: /aws/service/ami-amazon-linux-latest/amzn2-ami-hvm-x86_64-gp2
+  InstanceType:
+    Type: String
+    Default: t2.micro
+    AllowedValues:
+      - t2.micro
+  Keypair:
+    Type: String
+    Default: kati-keypair-london
+  Port1:
+    Type: Number
+    Default: 80
+  Port2:
+    Type: Number
+    Default: 22
+
+Resources:
+
+#  Luodaan Instanssi
+  MyInstance:
+    Type: AWS::EC2::Instance
+    Properties:
+      ImageId: !Ref LatestAmiId
+      KeyName: !Ref Keypair
+      InstanceType: !Ref InstanceType
+      SecurityGroupIds:
+        - !Ref MySecurityGroup
+      IamInstanceProfile: !Ref MyIAMInstanceProfile
+      Tags:
+        - Key: Name
+          Value: KatiInstance
+        - Key: Owner
+          Value: Kati
+
+# Luodaan IAM Policy, joka sallii SSM getParameter komennon sekä s3 täydet oikeudet
+  MyIAMPolicy:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyName: Allow-SSM-getParameter-and-full-S3
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Action: 's3:*'
+            Resource: '*'
+          - Effect: Allow
+            Action: 'ssm:GetParameter'
+            Resource: '*'
+      Roles:
+      - !Ref MyInstanceRole
+
+#  Luodaan Instanssin IAM rooli, johon policy on yhdistetty
+  MyInstanceRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: MyInstanceRole
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - ec2.amazonaws.com
+            Action:
+              - 'sts:AssumeRole'
+
+#  Luodaan Instanssiprofiili säilyttämään IAM roolia, joka syötetään EC2 instanssille sen käynnistyessä
+  MyIAMInstanceProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      InstanceProfileName: MyInstanceProfile
+      Roles:
+        - !Ref MyInstanceRole
+
+#  Luodaan Security Group Instanssille, joka sallii portit 80 ja 22
+  MySecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: SG for EC2
+      GroupName: Checkpoint4-SG
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: !Ref Port1
+          ToPort: !Ref Port1
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: !Ref Port2
+          ToPort: !Ref Port2
+          CidrIp: 0.0.0.0/0
+      Tags:
+        - Key: Owner
+          Value: Kati
+
+#  Luodaan VPC, Public Subnet, Internet Gateway ja Routetable sekä näiden yhdistämiseen tarvittavat resurssit
+
+  MyVPC:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: 10.0.0.0/16
+      Tags:
+        - Key: Name
+          Value: KatiVPC
+        - Key: Owner
+          Value: Kati
+
+  MyPublicSubnet:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId:
+        Ref: MyVPC
+      CidrBlock: 10.0.0.0/24
+      AvailabilityZone: "eu-west-2a"
+      Tags:
+        - Key: Name
+          Value: KatiSubnet
+        - Key: Owner
+          Value: Kati
+      MapPublicIpOnLaunch: true
+
+  MyInternetGateway:
+    Type: AWS::EC2::InternetGateway
+    Properties:
+      Tags:
+        - Key: Name
+          Value: KatiIG
+        - Key: Owner
+          Value: Kati
+
+  MyGatewayAttachmentforVPC:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      VpcId:
+        Ref: MyVPC
+      InternetGatewayId:
+        Ref: MyInternetGateway
+
+  MyRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId:
+        Ref: MyVPC
+      Tags:
+        - Key: Name
+          Value: kati-routetable
+        - Key: Owner
+          Value: Kati
+  MyRoute:
+    Type: AWS::EC2::Route
+    Properties:
+      DestinationCidrBlock: 0.0.0.0/0
+      RouteTableId:
+        Ref: MyRouteTable
+      GatewayId:
+        Ref: MyInternetGateway
+
+  SubnetRouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId:
+        Ref: MyPublicSubnet
+      RouteTableId:
+        Ref: MyRouteTable
+
+
+
