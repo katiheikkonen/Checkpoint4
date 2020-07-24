@@ -34,12 +34,25 @@ Resources:
       InstanceType: !Ref InstanceType
       SecurityGroupIds:
         - !Ref MySecurityGroup
+      SubnetId: !Ref MyPublicSubnet
       IamInstanceProfile: !Ref MyIAMInstanceProfile
+      UserData:
+        Fn::Base64:
+          Fn::Join:
+            - "\n"
+            - - "#!/bin/bash"
+              - "Sudo su"
+              - "yum update -y"
+              - "yum install -y httpd.x86_64"
+              - "systemctl start httpd.service"
+              - "systemctl enable httpd.service"
+              - "echo 'Hello World' > /var/www/html/index.html"
       Tags:
         - Key: Name
           Value: KatiInstance
         - Key: Owner
           Value: Kati
+
 
 # Luodaan IAM Policy, joka sallii SSM getParameter komennon sekä s3 täydet oikeudet
   MyIAMPolicy:
@@ -86,7 +99,6 @@ Resources:
     Type: AWS::EC2::SecurityGroup
     Properties:
       GroupDescription: SG for EC2
-      GroupName: Checkpoint4-SG
       SecurityGroupIngress:
         - IpProtocol: tcp
           FromPort: !Ref Port1
@@ -96,6 +108,7 @@ Resources:
           FromPort: !Ref Port2
           ToPort: !Ref Port2
           CidrIp: 0.0.0.0/0
+      VpcId: !Ref MyVPC
       Tags:
         - Key: Owner
           Value: Kati
