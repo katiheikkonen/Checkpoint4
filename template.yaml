@@ -2,9 +2,9 @@ AWSTemplateFormatVersion: 2010-09-09
 Description: The Adventure of NomNom
 
 Parameters:
-#  KatiParameter:
-#    Type: String
-#    Default: !GetAtt AWS::SSM::Parameter::checkpoint4
+  MyParameter:
+    Type: AWS::SSM::Parameter::Value<String>
+    Default: arn:aws:ssm:eu-west-2/:12345678912:document/demoooo/arn/topics/topic1                 #'my parameter value'             #'{{ssm:checkpoint4}}'
   LatestAmiId:
     Type: AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>
     Default: /aws/service/ami-amazon-linux-latest/amzn2-ami-hvm-x86_64-gp2
@@ -166,6 +166,7 @@ Resources:
           Value: kati-routetable
         - Key: Owner
           Value: Kati
+
   MyRoute:
     Type: AWS::EC2::Route
     Properties:
@@ -182,6 +183,15 @@ Resources:
         Ref: MyPublicSubnet
       RouteTableId:
         Ref: MyRouteTable
+
+
+
+
+  KatinParameter:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Type: String
+      Value: !GetAtt KatinBucket.Arn
 
 
 
