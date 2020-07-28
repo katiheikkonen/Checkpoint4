@@ -2,9 +2,9 @@ AWSTemplateFormatVersion: 2010-09-09
 Description: Checkpoint 4
 
 Parameters:
-#  MyParameter:
-#    Type: AWS::SSM::Parameter::Value<String>
-#    Default: #  arn:aws:ssm:eu-west-2/ 'my parameter value''{{ssm:checkpoint4}}'
+  MyParameter:
+    Type: AWS::SSM::Parameter::Value<String>
+    Default: 'checkpoint4'
   LatestAmiId:
     Type: AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>
     Default: /aws/service/ami-amazon-linux-latest/amzn2-ami-hvm-x86_64-gp2
@@ -46,7 +46,7 @@ Resources:
               - "yum install -y httpd.x86_64"
               - "systemctl start httpd.service"
               - "systemctl enable httpd.service"
-              - "echo 'Hello World' > /var/www/html/index.html"
+              - "aws ssm get-parameter --name checkpoint4 --region eu-west-kati > /var/www/html/index.html"
       Tags:
         - Key: Name
           Value: KatiInstance
